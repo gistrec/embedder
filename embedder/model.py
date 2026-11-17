@@ -6,6 +6,8 @@
 """
 from dataclasses import dataclass
 
+import numpy as np
+
 from embedder.config import settings
 
 # type -> префикс. Модели без записи работают без префиксов (симметричные).
@@ -23,7 +25,11 @@ class Embedder:
     def embed(self, texts: list[str], kind: str) -> list[list[float]]:
         prefix = PREFIXES.get(self.name, {}).get(kind, "")
         inputs = [prefix + t for t in texts]
-        return [vec.tolist() for vec in self._model.embed(inputs, batch_size=32)]
+        vectors = np.asarray(list(self._model.embed(inputs, batch_size=32)), dtype=np.float32)
+        # fastembed отдаёт эту модель без нормализации (норма ~3,5). Приводим к единичной
+        # длине, чтобы dot product и cosine у клиентов давали одинаковый порядок.
+        norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+        return (vectors / np.where(norms == 0, 1, norms)).tolist()
 
 
 def load(name: str | None = None) -> Embedder:

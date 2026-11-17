@@ -39,7 +39,11 @@ def test_embed_returns_vector_per_input(client):
     assert r.status_code == 200
     body = r.json()
     assert body["model"] == "fake/model" and body["dim"] == 3
-    assert body["data"] == [[2.0, 1.0, 0.0], [4.0, 1.0, 0.0]]
+    # Векторы нормализованы: [2, 1, 0] / sqrt(5) и [4, 1, 0] / sqrt(17).
+    assert body["data"][0] == pytest.approx([2 / 5**0.5, 1 / 5**0.5, 0.0])
+    assert body["data"][1] == pytest.approx([4 / 17**0.5, 1 / 17**0.5, 0.0])
+    for vec in body["data"]:
+        assert sum(x * x for x in vec) == pytest.approx(1.0)
 
 
 def test_limits(client, monkeypatch):
@@ -57,6 +61,9 @@ def test_token_required_when_set(client, monkeypatch):
     assert client.post("/v1/embed", json={"input": ["a"]}).status_code == 401
     bad = {"Authorization": "Bearer nope"}
     assert client.post("/v1/embed", json={"input": ["a"]}, headers=bad).status_code == 401
+    # Не-ASCII в заголовке — тоже 401, а не 500.
+    weird = {"Authorization": "Bearer é".encode("latin-1")}
+    assert client.post("/v1/embed", json={"input": ["a"]}, headers=weird).status_code == 401
     ok = {"Authorization": "Bearer s3cret"}
     assert client.post("/v1/embed", json={"input": ["a"]}, headers=ok).status_code == 200
     # health — без токена: его опрашивает мониторинг.
