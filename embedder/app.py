@@ -52,8 +52,9 @@ def create_app(loader=model_mod.load) -> FastAPI:
     def auth(authorization: str | None = Header(default=None)) -> None:
         if not settings.token:
             return
-        expected = f"Bearer {settings.token}"
-        if not authorization or not hmac.compare_digest(authorization, expected):
+        # Сравниваем байты: compare_digest на str с не-ASCII бросает TypeError (было бы 500).
+        expected = f"Bearer {settings.token}".encode()
+        if not authorization or not hmac.compare_digest(authorization.encode(), expected):
             raise HTTPException(status_code=401, detail="invalid token")
 
     @app.get("/health")
