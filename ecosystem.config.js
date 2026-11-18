@@ -25,8 +25,10 @@ module.exports = {
       // Один воркер: каждый держит свою копию модели (~0,5 ГБ).
       args: `embedder.app:app --host ${dotenv("EMBEDDER_HOST", "127.0.0.1")} --port ${dotenv("EMBEDDER_PORT", "9110")} --workers 1`,
       autorestart: true,
-      // Обычный пик — ~0,9 ГБ. Выше 1,5 ГБ считаем утечкой и перезапускаем: хост общий.
-      max_memory_restart: "1500M",
+      // Обычный пик модели по умолчанию — ~0,9 ГБ. Выше лимита считаем утечкой и
+      // перезапускаем: хост общий. Для модели крупнее поднимите EMBEDDER_MAX_MEMORY,
+      // иначе pm2 будет перезапускать здоровый процесс.
+      max_memory_restart: dotenv("EMBEDDER_MAX_MEMORY", "1500M"),
       exp_backoff_restart_delay: 100,
       max_restarts: Number.MAX_SAFE_INTEGER,
     },
