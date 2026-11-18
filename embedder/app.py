@@ -41,6 +41,8 @@ def create_app(loader=model_mod.load) -> FastAPI:
         started = time.monotonic()
         app.state.embedder = await run_in_threadpool(loader)
         app.state.lock = asyncio.Lock()
+        if not settings.token:
+            logger.warning("EMBEDDER_TOKEN пуст: /v1/embed отвечает без авторизации")
         logger.warning(
             "model %s loaded: dim=%s in %.1fs",
             app.state.embedder.name, app.state.embedder.dim, time.monotonic() - started,
